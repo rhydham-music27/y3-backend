@@ -49,7 +49,12 @@ ClassSessionSchema.pre('validate', function (next) {
 });
 
 // Indexes
-ClassSessionSchema.index({ finalClass: 1, cycleYear: 1, cycleMonth: 1, sessionNumber: 1 }, { unique: true, sparse: true });
+// NOTE: cycleNumber must be part of this key — sessionNumber resets to 1 each
+// cycle, so without it, two different cycles landing in the same calendar
+// month (common; cycles don't align to month boundaries) collide on
+// (finalClass, cycleYear, cycleMonth, sessionNumber) even though they're
+// unrelated sessions.
+ClassSessionSchema.index({ finalClass: 1, cycleNumber: 1, cycleYear: 1, cycleMonth: 1, sessionNumber: 1 }, { unique: true, sparse: true });
 ClassSessionSchema.index({ finalClass: 1, cycleNumber: 1, sessionNumber: 1 }, { unique: true, sparse: true });
 ClassSessionSchema.index({ finalClass: 1, sessionDate: 1 }, { unique: true, sparse: true });
 
