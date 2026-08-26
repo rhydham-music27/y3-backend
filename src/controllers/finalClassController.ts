@@ -455,12 +455,20 @@ export const setCycleStartController = asyncHandler(async (req: AuthRequest, res
 
   const cycleNumber = cls.currentCycleNumber || 1;
 
-  // Remove any stale sessions that were auto-generated before tutor set a start date
+  // Remove stale PLANNED sessions left behind by prior cycles: legacy sessions
+  // auto-generated before the tutor-chosen-start-date flow existed (no
+  // cycleNumber at all), and PLANNED sessions from earlier cycles that never
+  // got flagged COMPLETED (e.g. attendance was logged on a different date
+  // than the precomputed schedule). Both are guaranteed stale here because
+  // reaching this handler means the class's *current* cycle already ended
+  // (cycleStartPending was true), so nothing before `cycleNumber` is still a
+  // real future session — and left in place they collide with the new
+  // cycle's dates on the (finalClass, sessionDate) unique index.
   const ClassSession = (await import('../models/ClassSession')).default;
   await ClassSession.deleteMany({
     finalClass: cls._id,
-    cycleNumber: { $exists: false },
     status: 'PLANNED',
+    $or: [{ cycleNumber: { $exists: false } }, { cycleNumber: { $lt: cycleNumber } }],
   });
 
   const { generateSessionsFromStartDate } = await import('../services/classSessionService');
